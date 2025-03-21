@@ -1,1 +1,16 @@
+-- Author: Mateusz Chmielewski
+-- Version: 1.1
+-- Last Modification: 3/21/2025 10:37 AM
+
 # Setting up library
+
+```mermaid
+graph TD
+    A[Enter Chart Definition] --> B(Preview)
+    B --> C{decide}
+    C --> D[Keep]
+    C --> E[Edit Definition]
+    E --> B
+    D --> F[Save Image and Code]
+    F --> B
+```
