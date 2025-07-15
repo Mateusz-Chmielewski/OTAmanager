@@ -14,13 +14,11 @@ class FirmwareController(
     @Value("classpath:blink.bin")
     private var binaryFile: Resource
 ) {
-    private val testBinaryFile: String = "blink.bin"
-
     @GetMapping("/test")
     fun getTestBinaryFile(): ResponseEntity<Resource> {
 
         return ResponseEntity.ok()
-            .header("Content-Disposition", "attachment; filename=\"$testBinaryFile\"")
+            .header("Content-Disposition", "attachment; filename=\"${binaryFile.filename}\"")
             .contentType(MediaType.APPLICATION_OCTET_STREAM)
             .contentLength(binaryFile.contentLength())
             .body(binaryFile)
