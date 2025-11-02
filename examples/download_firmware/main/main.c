@@ -11,7 +11,14 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 
+#include "esp_http_client.h"
+#include "esp_https_ota.h"
+#include "Esp_ota_ops.h"
 
+
+#define SSID "ssid"
+#define PASSWORD "password"
+#define FIRMWARE_URL "https://example.com/firmware.bin"
 
 static const char *TAG = "download_firmware";
 
@@ -32,6 +39,37 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
 		ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
 		xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
 	}
+}
+
+esp_err_t http_event_handler(esp_http_client_event_t *evt)
+{
+	// ESP_LOGD(TAG, "HTTP event id: %d", evt->event_id);
+	return ESP_OK;
+}
+
+void ota_task(void *pvParameter) {
+	esp_http_client_config_t config = {
+		.url = FIRMWARE_URL,
+		.event_handler = http_event_handler,
+		.keep_alive_enable = true,
+		.skip_cert_common_name_check = true,
+	};
+
+	esp_https_ota_config_t ota_config = {
+		.http_config = &config,
+	};
+
+	ESP_LOGI(TAG, "Starting OTA from %s", FIRMWARE_URL);
+	esp_err_t ret = esp_https_ota(&ota_config);
+	if (ret == ESP_OK) {
+		ESP_LOGI(TAG, "OTA successful, restarting...");
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		esp_restart();
+	} else {
+		ESP_LOGE(TAG, "OTA failed...");
+	}
+
+	vTaskDelete(NULL);
 }
 
 void wifi_connect(char* wifi_ssid, char* wifi_password) {
@@ -78,4 +116,6 @@ void app_main(void)
     system_init();
     wifi_init();
     wifi_connect(SSID, PASSWORD);
+
+	xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
 }
