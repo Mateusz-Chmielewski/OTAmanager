@@ -1,11 +1,13 @@
 package com.mateuszchmielewski.otamanager.core.login
 
+import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController()
+@CrossOrigin(origins = ["*"], allowedHeaders = ["*"])
 @RequestMapping("/auth")
 class AuthenticationController(
     private val authenticationService: AuthenticationService

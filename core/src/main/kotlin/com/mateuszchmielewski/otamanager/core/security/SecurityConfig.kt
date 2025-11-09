@@ -8,6 +8,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import org.springframework.web.cors.reactive.CorsConfigurationSource
 
 @Configuration
 class SecurityConfig(
@@ -17,7 +20,8 @@ class SecurityConfig(
     @Bean
     fun securityFilterChain(httpSecurity: HttpSecurity): SecurityFilterChain {
         httpSecurity
-            .csrf { csrf -> csrf.disable() }
+            .cors{ it.configurationSource(corsConfigurationSource()) }
+            .csrf { it.disable() }
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/").permitAll()
@@ -36,4 +40,18 @@ class SecurityConfig(
         return httpSecurity.build()
     }
 
+    @Bean
+    fun corsConfigurationSource(): org.springframework.web.cors.CorsConfigurationSource {
+        val configuration = CorsConfiguration()
+        configuration.allowedOrigins = listOf("http://localhost:4200")
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+        configuration.allowedHeaders = listOf("Authorization", "Content-Type", "Accept")
+        configuration.exposedHeaders = listOf("Authorization")
+        configuration.allowCredentials = true
+        configuration.maxAge = 3600L
+
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", configuration)
+        return source
+    }
 }

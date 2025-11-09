@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { FormControl, FormGroup, NgForm, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { AuthenticationService } from '../../authentication/authentication.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login-form',
@@ -13,6 +14,8 @@ import { AuthenticationService } from '../../authentication/authentication.servi
 })
 export class LoginFormComponent {
   private readonly authenticationService = inject(AuthenticationService);
+  private readonly router = inject(Router);
+  
   loginForm: FormGroup;
 
   constructor() {
@@ -33,6 +36,7 @@ export class LoginFormComponent {
     this.authenticationService.login(this.loginForm.value).subscribe({
       next: (response) => {
         console.log('Login successful', response);
+        this.router.navigate(['/devices']);
       },
       error: (error) => {
         console.error('Login failed', error);
