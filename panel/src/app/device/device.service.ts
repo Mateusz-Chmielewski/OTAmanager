@@ -27,14 +27,15 @@ export class DeviceService {
     return this.http.get<Firmware[]>(this.getPath('firmware/history/' + device));
   }
 
-  uploadFirmware(device: string, firmware: File): Observable<number> {
+  uploadFirmware(device: string, firmware: File, version: string): Observable<number> {
     const formData = new FormData();
-    formData.append('file', firmware); 
-    // formData.append('deviceId', device);
+    formData.append('file', firmware);
+    formData.append('version', version);
 
     return this.http.post<any>(
       this.getPath('firmware/upload/' + device), 
-      formData
+      formData, 
+      { reportProgress: true, observe: 'events' }
     ).pipe(
       map((event: HttpEvent<any>) => {
         switch (event.type) {

@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import java.util.Date
 import java.util.UUID
 
 @Entity
@@ -13,12 +14,18 @@ import java.util.UUID
 data class FirmwareEntity (
     @Id
     @Column(name="id")
-    @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID,
+//    @GeneratedValue(strategy = GenerationType.UUID)
+    val id: UUID = UUID.randomUUID(),
 
     @Column(name="device_id")
     val deviceId: UUID,
 
+    @Column(name="version")
+    val version: String,
+
     @Column(name="description")
     val description: String,
+
+    @Column(name="uploaded_at")
+    val uploadedAt: Date = Date(),
 )

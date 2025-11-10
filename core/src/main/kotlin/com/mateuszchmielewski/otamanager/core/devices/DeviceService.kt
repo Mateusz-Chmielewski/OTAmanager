@@ -13,4 +13,6 @@ class DeviceService(private val deviceRepository: DeviceRepository) {
     fun getDeviceById(id: UUID): DeviceEntity? {
         return deviceRepository.findByIdOrNull(id)
     }
+
+
 }

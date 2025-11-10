@@ -7,8 +7,11 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
 @RestController
@@ -39,5 +42,25 @@ class FirmwareController(
         } else {
             ResponseEntity.notFound().build()
         }
+    }
+
+    @PostMapping("/upload/{id}", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun uploadFirmwareForDevice(
+        @PathVariable("id") id: UUID,
+        @RequestParam("file") file: MultipartFile,
+        @RequestParam("version") version: String,
+    ): ResponseEntity<String> {
+        if (file.isEmpty) {
+            return ResponseEntity.badRequest().body("File is empty")
+        }
+
+        firmwareService.storeFirmwareFile(
+            id,
+            file.bytes,
+            file.originalFilename ?: "unknown",
+            version
+        )
+
+        return ResponseEntity.ok("File uploaded successfully for device $id")
     }
 }

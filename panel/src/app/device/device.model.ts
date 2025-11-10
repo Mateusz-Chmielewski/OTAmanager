@@ -6,6 +6,7 @@ export interface Device {
 
 export interface Firmware {
     id: string;
-    version: number;
+    version: string;
+    description: string;
     uploadedAt: Date;
 }
