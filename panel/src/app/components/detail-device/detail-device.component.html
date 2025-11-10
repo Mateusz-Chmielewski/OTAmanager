@@ -1,0 +1,19 @@
+<div class="container">
+    <button (click)="onBack()">Back to Device List</button>
+    <h1>Device Details</h1>
+    <h2>{{device()?.name}}</h2>
+    <p>ID: {{device()?.id}}</p>
+    <p>Description: {{device()?.description}}</p>
+    <h3>Firmware History: </h3>
+    <ul>
+        @if (firmwareHistory().length === 0) {
+            <p>No firmware history available.</p>
+        }
+        @for(firmware of firmwareHistory(); track firmware.id;) {
+            <li>
+                <p>Version: {{firmware.version}}</p>
+                <p>Uploaded At: {{firmware.uploadedAt}}</p>
+            </li>
+        }
+    </ul>
+</div>

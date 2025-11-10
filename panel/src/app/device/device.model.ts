@@ -3,3 +3,9 @@ export interface Device {
     name: string;
     description: string;
 }
+
+export interface Firmware {
+    id: string;
+    version: number;
+    uploadedAt: Date;
+}

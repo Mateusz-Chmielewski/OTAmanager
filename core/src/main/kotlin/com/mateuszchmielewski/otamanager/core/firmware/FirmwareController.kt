@@ -6,15 +6,18 @@ import org.springframework.core.io.Resource
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @CrossOrigin(origins = ["*"])
 @RequestMapping("/firmware")
 class FirmwareController(
     @Value("classpath:blink.bin")
-    private var binaryFile: Resource
+    private var binaryFile: Resource,
+    private val firmwareService: FirmwareService
 ) {
     @GetMapping("/test")
     fun getTestBinaryFile(): ResponseEntity<Resource> {
@@ -24,5 +27,17 @@ class FirmwareController(
             .contentType(MediaType.APPLICATION_OCTET_STREAM)
             .contentLength(binaryFile.contentLength())
             .body(binaryFile)
+    }
+
+    @GetMapping("/history/{id}")
+    fun getFirmwareHistoryByDeviceId(
+        @PathVariable("id") id: UUID
+    ): ResponseEntity<List<FirmwareEntity>> {
+        val firmwareHistory = firmwareService.getFirmwareHistoryByDeviceId(id)
+        return if (firmwareHistory.isNotEmpty()) {
+            ResponseEntity.ok(firmwareHistory)
+        } else {
+            ResponseEntity.notFound().build()
+        }
     }
 }

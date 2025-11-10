@@ -12,9 +12,9 @@ import java.util.UUID
 @Table(name="device")
 data class DeviceEntity (
     @Id
-    @Column(name="id")
+    @Column(name="id", nullable = false)
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID,
+    val id: UUID? = null,
 
     @Column(name="username")
     val name: String,
