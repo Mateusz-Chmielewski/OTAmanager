@@ -1,10 +1,13 @@
 package com.mateuszchmielewski.otamanager.core.firmware
 
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.core.io.Resource
+import org.springframework.core.io.UrlResource
 import org.springframework.stereotype.Service
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.Optional
 import java.util.UUID
 
 @Service
@@ -42,6 +45,32 @@ class FirmwareService(
         firmwareRepository.save(firmwareEntity)
 
         return firmwareEntity
+    }
+
+    fun loadFirmwareFileAsResource(deviceId: UUID, firmwareId: UUID?): Resource? {
+        val installedFirmware = if (firmwareId != null) firmwareRepository.findById(firmwareId) else Optional.empty()
+
+        val newestFirmware = firmwareRepository.findAll()
+            .filter { it.deviceId == deviceId }
+            .maxByOrNull { it.uploadedAt }
+
+        if (newestFirmware == null) {
+            return null
+        }
+
+        if (installedFirmware.isEmpty || installedFirmware.get().id != newestFirmware.id) {
+            val filename = newestFirmware.id.toString() + ".bin"
+            val filePath = storagePath.resolve(filename).normalize()
+            return UrlResource(filePath.toUri())
+        } else {
+            return null
+        }
+    }
+
+    fun getNewestFirmwareForDevice(deviceId: UUID): FirmwareEntity? {
+        return firmwareRepository.findAll()
+            .filter { it.deviceId == deviceId }
+            .maxByOrNull { it.uploadedAt }
     }
 
 }

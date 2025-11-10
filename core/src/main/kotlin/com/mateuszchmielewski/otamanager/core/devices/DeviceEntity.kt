@@ -13,8 +13,7 @@ import java.util.UUID
 data class DeviceEntity (
     @Id
     @Column(name="id", nullable = false)
-    @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID? = null,
+    val id: UUID = UUID.randomUUID(),
 
     @Column(name="username")
     val name: String,

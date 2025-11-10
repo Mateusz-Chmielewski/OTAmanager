@@ -25,6 +25,9 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers("/").permitAll()
+                    .requestMatchers("/firmware/test").permitAll()
+                    .requestMatchers("/firmware/download/**").permitAll()
+                    .requestMatchers("/firmware/version/**").permitAll()
                     .requestMatchers("/auth/**").permitAll()
                     .dispatcherTypeMatchers(
                         DispatcherType.ERROR,

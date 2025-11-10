@@ -14,6 +14,7 @@ class DatabaseInitializer {
         return CommandLineRunner {
             if (deviceRepository.count() == 0L) {
                 val device1 = DeviceEntity(
+                    id = UUID.fromString("fe6469ac-8a21-4be4-b5fb-726242d4f918"),
                     name = "ESP32-Office",
                     description = "ESP32 device in office room"
                 )

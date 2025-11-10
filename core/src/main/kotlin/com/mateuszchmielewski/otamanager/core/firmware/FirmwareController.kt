@@ -3,6 +3,7 @@ package com.mateuszchmielewski.otamanager.core.firmware
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.core.io.Resource
+import org.springframework.data.repository.query.Param
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
@@ -62,5 +63,32 @@ class FirmwareController(
         )
 
         return ResponseEntity.ok("File uploaded successfully for device $id")
+    }
+
+    @GetMapping("/download/{deviceId}")
+    fun downloadFirmwareFile(
+        @PathVariable("deviceId") deviceId: UUID,
+        @Param("current_version") firmwareId: UUID?,
+    ): ResponseEntity<Resource> {
+        val firmwareResource = firmwareService.loadFirmwareFileAsResource(deviceId, firmwareId)
+            ?: return ResponseEntity.notFound().build()
+
+        return ResponseEntity.ok()
+            .header("Content-Disposition", "attachment; filename=\"${firmwareResource.filename}\"")
+            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+            .contentLength(firmwareResource.contentLength())
+            .body(firmwareResource)
+    }
+
+    @GetMapping("/version/{deviceId}")
+    fun getNewestFirmwareVersionForDevice(
+        @PathVariable("deviceId") deviceId: UUID,
+    ): ResponseEntity<String> {
+        val newestFirmware = firmwareService.getNewestFirmwareForDevice(deviceId)
+            ?: return ResponseEntity.notFound().build()
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.TEXT_PLAIN)
+            .body(newestFirmware.version)
     }
 }
