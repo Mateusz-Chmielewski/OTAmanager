@@ -19,7 +19,12 @@
 
 #define SSID "ssid"
 #define PASSWORD "password"
-#define FIRMWARE_URL "https://example.com/firmware.bin"
+//#define FIRMWARE_URL "http://192.168.0.198:8080/firmware/test"
+#define FIRMWARE_URL "http://192.168.0.198:8080/firmware/download/fe6469ac-8a21-4be4-b5fb-726242d4f918"
+#define VERSION_URL "http://192.168.0.198:8080/firmware/version/fe6469ac-8a21-4be4-b5fb-726242d4f918"
+
+#define MAX_HTTP_OUTPUT_BUFFER 2048
+
 
 static const char *TAG = "download_firmware";
 
@@ -28,9 +33,9 @@ const int WIFI_CONNECTED_BIT = BIT0;
 
 void blink_task(void *pvParameter) {
 	while (1) {
-		ESP_LOGI(TAG, "Blink on!");
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-		ESP_LOGI(TAG, "Blink off!");
+//		ESP_LOGI(TAG, "Blink on!");
+//		vTaskDelay(1000 / portTICK_PERIOD_MS);
+//		ESP_LOGI(TAG, "Blink off!");
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }
@@ -60,46 +65,51 @@ esp_err_t http_event_handler(esp_http_client_event_t *evt)
 esp_err_t fetch_version_and_save_to_nvs(void)
 {
     char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER] = {0};
-    
-    esp_http_client_config_t config = {
-        .url = VERSION_URL,
-        .event_handler = http_event_handler,
-        .user_data = local_response_buffer,
-        .disable_auto_redirect = true,
-    };
-    
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    
-    esp_err_t err = esp_http_client_perform(client);
-    
-    if (err == ESP_OK) {
-        int content_length = esp_http_client_get_content_length(client);
-        ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %d",
-                esp_http_client_get_status_code(client),
-                content_length);
-        
-        ESP_LOGI(TAG, "Version response: %s", local_response_buffer);
-        
-        nvs_handle_t nvs_handle;
-        err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
-        if (err == ESP_OK) {
-            err = nvs_set_str(nvs_handle, "firmware_ver", local_response_buffer);
-            if (err == ESP_OK) {
-                err = nvs_commit(nvs_handle);
-                ESP_LOGI(TAG, "Version saved to NVS: %s", local_response_buffer);
-            } else {
-                ESP_LOGE(TAG, "Failed to write to NVS");
-            }
-            nvs_close(nvs_handle);
-        } else {
-            ESP_LOGE(TAG, "Failed to open NVS");
-        }
-    } else {
-        ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(err));
-    }
-    
-    esp_http_client_cleanup(client);
-    return err;
+
+	esp_http_client_config_t config = {
+		.url = VERSION_URL,
+		.method = HTTP_METHOD_GET,
+	};
+
+	esp_http_client_handle_t client = esp_http_client_init(&config);
+	esp_err_t err = esp_http_client_open(client, 0);
+
+	if (err == ESP_OK) {
+		int content_length = esp_http_client_fetch_headers(client);
+		ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %d",
+				esp_http_client_get_status_code(client),
+				content_length);
+
+		int data_read = esp_http_client_read(client, local_response_buffer, MAX_HTTP_OUTPUT_BUFFER - 1);
+
+		if (data_read >= 0) {
+			local_response_buffer[data_read] = 0;
+			ESP_LOGI(TAG, "Version response (%d bytes): %s", data_read, local_response_buffer);
+
+			nvs_handle_t nvs_handle;
+			err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
+			if (err == ESP_OK) {
+				err = nvs_set_str(nvs_handle, "firmware_ver", local_response_buffer);
+				if (err == ESP_OK) {
+					err = nvs_commit(nvs_handle);
+					ESP_LOGI(TAG, "Version saved to NVS: %s", local_response_buffer);
+				} else {
+					ESP_LOGE(TAG, "Failed to write to NVS");
+				}
+				nvs_close(nvs_handle);
+			} else {
+				ESP_LOGE(TAG, "Failed to open NVS");
+			}
+		} else {
+			ESP_LOGE(TAG, "Failed to read response");
+		}
+	} else {
+		ESP_LOGE(TAG, "Failed to open HTTP connection: %s", esp_err_to_name(err));
+	}
+
+	esp_http_client_close(client);
+	esp_http_client_cleanup(client);
+	return err;
 }
 
 esp_err_t read_version_from_nvs(char *version_buffer, size_t buffer_size)
@@ -152,27 +162,27 @@ void ota_task(void *pvParameter) {
 		snprintf(firmware_url, sizeof(firmware_url), "%s?current_version=%s", FIRMWARE_URL, stored_version);
 
 
-	esp_http_client_config_t config = {
+		esp_http_client_config_t config = {
 			.url = firmware_url,
-		.event_handler = http_event_handler,
-		.keep_alive_enable = true,
-		.skip_cert_common_name_check = true,
-		.crt_bundle_attach = esp_crt_bundle_attach,
-	};
+			.event_handler = http_event_handler,
+			.keep_alive_enable = true,
+			.skip_cert_common_name_check = true,
+			.crt_bundle_attach = esp_crt_bundle_attach,
+		};
 
-	esp_https_ota_config_t ota_config = {
-		.http_config = &config,
-	};
+		esp_https_ota_config_t ota_config = {
+			.http_config = &config,
+		};
 
 		ESP_LOGI(TAG, "Starting OTA from %s", firmware_url);
-	esp_err_t ret = esp_https_ota(&ota_config);
-	if (ret == ESP_OK) {
-		ESP_LOGI(TAG, "OTA successful, restarting...");
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		esp_err_t ret = esp_https_ota(&ota_config);
+		if (ret == ESP_OK) {
+			ESP_LOGI(TAG, "OTA successful, restarting...");
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
 			fetch_version_and_save_to_nvs();
-		esp_restart();
-	} else {
-		ESP_LOGE(TAG, "OTA failed...");
+			esp_restart();
+		} else {
+			ESP_LOGE(TAG, "OTA failed...");
 		}
 
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);

@@ -62,12 +62,12 @@ export class DetailDeviceComponent implements OnInit, OnDestroy {
   onUploadFirmware(): void {
     const file = this.selectedFile();
     const deviceId = this.device()?.id;
-    const version = this.uploadFirmwareForm.get('firmwareVersion')?.value;
+    const version = this.uploadFirmwareForm.get('firmwareVersion')?.value ?? '';
 
     console.log('Uploading firmware for device:', deviceId, 'File:', file);
 
     if (file && deviceId) {
-      this.deviceService.uploadFirmware(deviceId, file, version ?? "").subscribe({
+      this.deviceService.uploadFirmware(deviceId, file, version).subscribe({
         next: (progress) => {
           console.log('Upload progress:', progress);
           if (progress === 100) {
@@ -76,9 +76,6 @@ export class DetailDeviceComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error uploading firmware:', error);
-        },
-        complete: () => {
-          this.loadDeviceDetails(deviceId);
         }
       });
     }

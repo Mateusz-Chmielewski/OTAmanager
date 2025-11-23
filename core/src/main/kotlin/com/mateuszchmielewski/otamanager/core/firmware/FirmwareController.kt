@@ -68,7 +68,7 @@ class FirmwareController(
     @GetMapping("/download/{deviceId}")
     fun downloadFirmwareFile(
         @PathVariable("deviceId") deviceId: UUID,
-        @Param("current_version") firmwareId: UUID?,
+        @RequestParam("current_version") firmwareId: UUID?,
     ): ResponseEntity<Resource> {
         val firmwareResource = firmwareService.loadFirmwareFileAsResource(deviceId, firmwareId)
             ?: return ResponseEntity.notFound().build()
@@ -89,6 +89,6 @@ class FirmwareController(
 
         return ResponseEntity.ok()
             .contentType(MediaType.TEXT_PLAIN)
-            .body(newestFirmware.version)
+            .body(newestFirmware.id.toString())
     }
 }
