@@ -1,0 +1,29 @@
+<div class="container">
+    <button (click)="onBack()">Back to Device List</button>
+    <h1>Device Details</h1>
+    <h2>{{device()?.name}}</h2>
+    <p>ID: {{device()?.id}}</p>
+    <p>Description: {{device()?.description}}</p>
+
+    <form [formGroup]="uploadFirmwareForm" (ngSubmit)="onUploadFirmware()">
+        <h3>Upload New Firmware:</h3>
+        <label for="firmwareFile">Select Firmware File:</label>
+        <input id="firmwareFile" type="file" formControlName="firmwareFile" (change)="onFileSelected($event)" /><br/>
+        <label for="firmwareVersion">Firmware Version:</label>
+        <input id="firmwareVersion" type="text" formControlName="firmwareVersion" placeholder="Firmware Version" />
+        <button type="submit">Upload</button>
+    </form>
+
+    <h3>Firmware History: </h3>
+    <ul>
+        @if (firmwareHistory().length === 0) {
+            <p>No firmware history available.</p>
+        }
+        @for(firmware of firmwareHistory(); track firmware.id;) {
+            <li>
+                <p>Version: {{firmware.version}}</p>
+                <p>Uploaded At: {{firmware.uploadedAt}}</p>
+            </li>
+        }
+    </ul>
+</div>
