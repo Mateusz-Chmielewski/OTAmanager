@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image:  postgres:16-alpine
+    container_name: otamanager-postgres
+    restart: unless-stopped
+    environment: 
+      POSTGRES_DB: otamanager
+      POSTGRES_USER: otamanager
+      POSTGRES_PASSWORD: otamanager_password
+    ports: 
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: 
+      - otamanager-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U otamanager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Eclipse Mosquitto MQTT Broker
+  mosquitto: 
+    image: eclipse-mosquitto:2
+    container_name:  otamanager-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./core/mosquitto/config:/mosquitto/config
+      - ./core/mosquitto/data:/mosquitto/data
+      - ./core/mosquitto/log:/mosquitto/log
+      - mosquitto_data:/mosquitto/data
+    networks:
+      - otamanager-network
+    healthcheck: 
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -i healthcheck -W 3"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # Spring Boot Backend (Kotlin)
+  backend:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    container_name: otamanager-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/otamanager
+      SPRING_DATASOURCE_USERNAME: otamanager
+      SPRING_DATASOURCE_PASSWORD: otamanager_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      MQTT_BROKER_URL: tcp://mosquitto:1883
+    depends_on:
+      postgres: 
+        condition: service_healthy
+      mosquitto:
+        condition:  service_healthy
+    networks: 
+      - otamanager-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Angular Frontend
+  frontend:
+    build: 
+      context: ./panel
+      dockerfile: Dockerfile
+    container_name: otamanager-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on: 
+      - backend
+    networks: 
+      - otamanager-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
+      interval:  30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  mosquitto_data:
+    driver: local
+
+networks:
+  otamanager-network: 
+    driver: bridge
