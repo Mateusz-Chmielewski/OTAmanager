@@ -32,8 +32,4 @@ export class DeviceListComponent implements OnInit {
     })
   }
 
-  onDetailDevice(deviceId: string): void {
-    this.deviceService.navigateToDevice(deviceId);
-  }
-
 }

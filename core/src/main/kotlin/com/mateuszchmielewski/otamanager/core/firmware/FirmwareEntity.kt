@@ -17,8 +17,8 @@ data class FirmwareEntity (
 //    @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID = UUID.randomUUID(),
 
-    @Column(name="device_id")
-    val deviceId: UUID,
+    @Column(name="group_id")
+    val groupId: UUID,
 
     @Column(name="version")
     val version: String,
@@ -28,4 +28,7 @@ data class FirmwareEntity (
 
     @Column(name="uploaded_at")
     val uploadedAt: Date = Date(),
+
+    @Column(name="is_active")
+    val isActive: Boolean = false,
 )
