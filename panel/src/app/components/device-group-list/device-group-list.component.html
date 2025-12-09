@@ -1,0 +1,41 @@
+<div class="device-group-container">
+  <mat-card class="header-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>folder</mat-icon>
+        Device Groups
+      </mat-card-title>
+    </mat-card-header>
+  </mat-card>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="isLoading()" class="loading-container">
+    <mat-spinner></mat-spinner>
+    <p>Loading device groups...</p>
+  </div>
+
+  <!-- Device Groups List -->
+  <mat-card *ngIf="!isLoading() && deviceGroups().length > 0" class="list-card">
+    <mat-list>
+      <mat-list-item *ngFor="let group of deviceGroups(); let last = last" 
+                     class="group-item"
+                     (click)="onDetailDeviceGroup(group)">
+        <mat-icon matListItemIcon>folder_open</mat-icon>
+        <div matListItemTitle class="group-title">{{ group.name }}</div>
+        <div matListItemLine class="group-description">{{ group.description }}</div>
+        <button mat-icon-button matListItemMeta>
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </mat-list-item>
+    </mat-list>
+  </mat-card>
+
+  <!-- Empty State -->
+  <mat-card *ngIf="!isLoading() && deviceGroups().length === 0" class="empty-state">
+    <mat-card-content>
+      <mat-icon class="empty-icon">folder_off</mat-icon>
+      <h3>No Device Groups Found</h3>
+      <p>There are no device groups available at the moment.</p>
+    </mat-card-content>
+  </mat-card>
+</div>

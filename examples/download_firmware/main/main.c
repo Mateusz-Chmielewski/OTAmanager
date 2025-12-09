@@ -12,6 +12,7 @@
 #include "nvs_flash.h"
 
 #include "esp_http_client.h"
+#include "mqtt_client.h"
 #include "esp_https_ota.h"
 #include "esp_crt_bundle.h"
 #include "Esp_ota_ops.h"
@@ -22,6 +23,10 @@
 //#define FIRMWARE_URL "http://192.168.0.198:8080/firmware/test"
 #define FIRMWARE_URL "http://192.168.0.198:8080/firmware/download/fe6469ac-8a21-4be4-b5fb-726242d4f918"
 #define VERSION_URL "http://192.168.0.198:8080/firmware/version/fe6469ac-8a21-4be4-b5fb-726242d4f918"
+#define OTA_MQTT_SERVER "mqtt://192.168.0.198:1883"
+#define OTA_MQTT_CHANNEL "ota/fe6469ac-8a21-4be4-b5fb-726242d4f918"
+
+#define TEST_BLINKING 0
 
 #define MAX_HTTP_OUTPUT_BUFFER 2048
 
@@ -33,10 +38,12 @@ const int WIFI_CONNECTED_BIT = BIT0;
 
 void blink_task(void *pvParameter) {
 	while (1) {
-//		ESP_LOGI(TAG, "Blink on!");
-//		vTaskDelay(1000 / portTICK_PERIOD_MS);
-//		ESP_LOGI(TAG, "Blink off!");
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		if (TEST_BLINKING) {
+			ESP_LOGI(TAG, "Blink on!");
+			vTaskDelay(100 / portTICK_PERIOD_MS);
+			ESP_LOGI(TAG, "Blink off!");
+		}
+		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
 }
 
@@ -151,40 +158,95 @@ esp_err_t read_version_from_nvs(char *version_buffer, size_t buffer_size)
 // 	return esp_https_ota_verify(&ota_config);
 // }
 
-void ota_task(void *pvParameter) {
+void ota_task() {
+	char firmware_url[256];
+	char stored_version[64];
+    esp_err_t nvs_err = read_version_from_nvs(stored_version, sizeof(stored_version));
+	if (nvs_err != ESP_OK) {
+		stored_version[0] = '\0';
+	}
+	snprintf(firmware_url, sizeof(firmware_url), "%s?current_version=%s", FIRMWARE_URL, stored_version);
+
+
+	esp_http_client_config_t config = {
+		.url = firmware_url,
+		.event_handler = http_event_handler,
+		.keep_alive_enable = true,
+		.skip_cert_common_name_check = true,
+		.crt_bundle_attach = esp_crt_bundle_attach,
+	};
+
+	esp_https_ota_config_t ota_config = {
+		.http_config = &config,
+	};
+
+	ESP_LOGI(TAG, "Starting OTA from %s", firmware_url);
+	esp_err_t ret = esp_https_ota(&ota_config);
+	if (ret == ESP_OK) {
+		ESP_LOGI(TAG, "OTA successful, restarting...");
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		fetch_version_and_save_to_nvs();
+		esp_restart();
+	} else {
+		ESP_LOGE(TAG, "OTA failed...");
+	}
+}
+
+void mqtt_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
+	ESP_LOGI(TAG, "MQTT event received: event_id=%d", event_id);
+
+	esp_mqtt_event_handle_t event = event_data;
+	esp_mqtt_client_handle_t client = event_data->client;
+
+	switch (event_id) {
+		case MQTT_EVENT_CONNECTED:
+			ESP_LOGI(TAG, "MQTT connected. Subscribing to OTA channel...");
+			esp_mqtt_client_subscribe(client, OTA_MQTT_CHANNEL, 0);
+			break;
+		case MQTT_EVENT_DISCONNECTED:
+			ESP_LOGI(TAG, "MQTT disconnected");
+			break;
+		case MQTT_EVENT_SUBSCRIBED:
+			ESP_LOGI(TAG, "MQTT subscribed");
+			break;
+		case MQTT_EVENT_UNSUBSCRIBED:
+			ESP_LOGI(TAG, "MQTT unsubscribed");
+			break;
+		case MQTT_EVENT_DATA: {
+			ESP_LOGI(TAG, "MQTT data received on topic: %.*s", event->topic_len, event->topic);
+			ESP_LOGI(TAG, "Message: %.*s", event->data_len, event->data);
+
+			if (strncmp(event->topic, OTA_MQTT_CHANNEL, event->topic_len) == 0) {
+				ESP_LOGI(TAG, "OTA command received via MQTT");
+				ota_task();
+			}
+			break;
+		case MQTT_EVENT_ERROR:
+			ESP_LOGI(TAG, "MQTT error occurred");
+			break;
+		}
+		default:
+			ESP_LOGI(TAG, "Other MQTT event id: %d", event_id);
+			break;
+	}
+}
+
+void mqtt_init() {
+	const esp_mqtt_client_config_t mqtt_cfg = {
+		.uri = OTA_MQTT_SERVER,
+	};
+
+	esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+	esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+	esp_mqtt_client_start(client);
+}
+
+void ota_threat(void *pvParameter) {
+	mqtt_init();
+	ota_task();
+
 	while (1) {
-		char firmware_url[256];
-		char stored_version[64];
-        esp_err_t nvs_err = read_version_from_nvs(stored_version, sizeof(stored_version));
-		if (nvs_err != ESP_OK) {
-			stored_version[0] = '\0';
-		}
-		snprintf(firmware_url, sizeof(firmware_url), "%s?current_version=%s", FIRMWARE_URL, stored_version);
-
-
-		esp_http_client_config_t config = {
-			.url = firmware_url,
-			.event_handler = http_event_handler,
-			.keep_alive_enable = true,
-			.skip_cert_common_name_check = true,
-			.crt_bundle_attach = esp_crt_bundle_attach,
-		};
-
-		esp_https_ota_config_t ota_config = {
-			.http_config = &config,
-		};
-
-		ESP_LOGI(TAG, "Starting OTA from %s", firmware_url);
-		esp_err_t ret = esp_https_ota(&ota_config);
-		if (ret == ESP_OK) {
-			ESP_LOGI(TAG, "OTA successful, restarting...");
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
-			fetch_version_and_save_to_nvs();
-			esp_restart();
-		} else {
-			ESP_LOGE(TAG, "OTA failed...");
-		}
-
+		// Additional operation if needed
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 	}
 
@@ -236,6 +298,6 @@ void app_main(void)
     wifi_init();
     wifi_connect(SSID, PASSWORD);
 
-	xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
+	xTaskCreate(&ota_threat, "ota_task", 8192, NULL, 5, NULL);
 	xTaskCreate(&blink_task, "blink_task", 2048, NULL, 5, NULL);
 }

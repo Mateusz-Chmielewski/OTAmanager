@@ -16,7 +16,7 @@ export class DetailDeviceComponent implements OnInit, OnDestroy {
 
   uploadFirmwareForm: FormGroup;
 
-  device = computed(() => this.deviceService.currentDevice());
+  device = computed(() => {return {id: 'device123', name: 'Device 123', description: 'A sample device', groupId: 'group1'};});
   firmwareHistory = computed(() => this.deviceService.firmwareHistory());
   selectedFile = signal<File | null>(null);
 
@@ -37,7 +37,7 @@ export class DetailDeviceComponent implements OnInit, OnDestroy {
   private loadDeviceDetails(deviceId: string): void {
     this.deviceService.detailDevice(deviceId).subscribe({
       next: (device) => {
-        this.deviceService.currentDevice.set(device);
+        // this.deviceService.currentDevice.set(device);
       },
       error: (error) => {
         console.error('Error loading device details', error);

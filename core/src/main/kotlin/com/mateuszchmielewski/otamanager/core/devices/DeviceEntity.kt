@@ -15,9 +15,12 @@ data class DeviceEntity (
     @Column(name="id", nullable = false)
     val id: UUID = UUID.randomUUID(),
 
-    @Column(name="username")
+    @Column(name="name")
     val name: String,
 
     @Column(name="description")
     val description: String,
+
+    @Column(name="group_id")
+    val groupId: UUID,
 )

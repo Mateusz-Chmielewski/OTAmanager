@@ -38,11 +38,7 @@ class FirmwareController(
         @PathVariable("id") id: UUID
     ): ResponseEntity<List<FirmwareEntity>> {
         val firmwareHistory = firmwareService.getFirmwareHistoryByDeviceId(id)
-        return if (firmwareHistory.isNotEmpty()) {
-            ResponseEntity.ok(firmwareHistory)
-        } else {
-            ResponseEntity.notFound().build()
-        }
+        return ResponseEntity.ok(firmwareHistory)
     }
 
     @PostMapping("/upload/{id}", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
@@ -62,7 +58,7 @@ class FirmwareController(
             version
         )
 
-        return ResponseEntity.ok("File uploaded successfully for device $id")
+        return ResponseEntity.ok("File uploaded successfully for device group $id")
     }
 
     @GetMapping("/download/{deviceId}")

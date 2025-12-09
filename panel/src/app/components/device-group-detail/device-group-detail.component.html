@@ -1,0 +1,211 @@
+<div class="device-group-detail-container">
+  <!-- Back Button -->
+  <button mat-icon-button (click)="onBack()" class="back-button">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+
+  <!-- Device Group Info Card -->
+  <mat-card class="info-card" *ngIf="deviceGroup()">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="group-icon">folder_special</mat-icon>
+      <mat-card-title>{{ deviceGroup()?.name }}</mat-card-title>
+      <mat-card-subtitle>Device Group Details</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-list>
+        <mat-list-item>
+          <mat-icon matListItemIcon>description</mat-icon>
+          <div matListItemTitle>Description</div>
+          <div matListItemLine>{{ deviceGroup()?.description || 'No description available' }}</div>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+        <mat-list-item>
+          <mat-icon matListItemIcon>fingerprint</mat-icon>
+          <div matListItemTitle>Group ID</div>
+          <div matListItemLine>{{ deviceGroup()?.id }}</div>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+        <mat-list-item>
+          <mat-icon matListItemIcon>person</mat-icon>
+          <div matListItemTitle>User ID</div>
+          <div matListItemLine>{{ deviceGroup()?.userId }}</div>
+        </mat-list-item>
+      </mat-list>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Devices in Group Card -->
+  <mat-card class="devices-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="devices-icon">devices</mat-icon>
+      <mat-card-title>Devices in Group</mat-card-title>
+      <mat-card-subtitle>{{ currentDevices().length }} device(s) in this group</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="currentDevices().length === 0" class="empty-devices">
+        <mat-icon class="empty-icon">devices_off</mat-icon>
+        <p>No devices in this group</p>
+      </div>
+
+      <div *ngIf="currentDevices().length > 0" class="table-container">
+        <table mat-table [dataSource]="currentDevices()" class="devices-table">
+          <!-- Name Column -->
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Device Name</th>
+            <td mat-cell *matCellDef="let device">
+              <strong>{{ device.name }}</strong>
+            </td>
+          </ng-container>
+
+          <!-- Description Column -->
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef>Description</th>
+            <td mat-cell *matCellDef="let device">
+              {{ device.description || 'No description' }}
+            </td>
+          </ng-container>
+
+          <!-- ID Column -->
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>Device ID</th>
+            <td mat-cell *matCellDef="let device">
+              <code class="device-id">{{ device.id }}</code>
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let device">
+              <button mat-icon-button color="primary" (click)="onViewDevice(device.id)" matTooltip="View details">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="deviceColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: deviceColumns;"></tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Upload Firmware Card -->
+  <mat-card class="upload-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="upload-icon">cloud_upload</mat-icon>
+      <mat-card-title>Upload Firmware</mat-card-title>
+      <mat-card-subtitle>Upload new firmware for this device group</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="uploadFirmwareForm" (ngSubmit)="onUploadFirmware()" class="upload-form">
+        <!-- Version Input -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Firmware Version</mat-label>
+          <input matInput formControlName="firmwareVersion" placeholder="e.g., 1.0.0">
+          <mat-icon matPrefix>label</mat-icon>
+          <mat-error *ngIf="uploadFirmwareForm.get('firmwareVersion')?.hasError('required')">
+            Version is required
+          </mat-error>
+        </mat-form-field>
+
+        <!-- File Input -->
+        <div class="file-input-container">
+          <input 
+            type="file" 
+            #fileInput 
+            (change)="onFileSelected($event)" 
+            style="display: none"
+            accept=".bin,.hex,.fw">
+          <button 
+            mat-raised-button 
+            type="button" 
+            (click)="fileInput.click()"
+            class="file-select-button">
+            <mat-icon>attach_file</mat-icon>
+            Select Firmware File
+          </button>
+          <span class="file-name" *ngIf="selectedFile()">
+            {{ selectedFile()?.name }}
+            <mat-icon class="file-check">check_circle</mat-icon>
+          </span>
+          <span class="file-name no-file" *ngIf="!selectedFile()">
+            No file selected
+          </span>
+        </div>
+
+        <!-- Upload Progress -->
+        <div class="progress-container" *ngIf="isUploading()">
+          <mat-progress-bar mode="determinate" [value]="uploadProgress()"></mat-progress-bar>
+          <p class="progress-text">Uploading... {{ uploadProgress() }}%</p>
+        </div>
+
+        <!-- Submit Button -->
+        <button 
+          mat-raised-button 
+          color="primary" 
+          type="submit" 
+          class="upload-button"
+          [disabled]="!uploadFirmwareForm.valid || isUploading()">
+          <mat-icon>upload</mat-icon>
+          Upload Firmware
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Firmware History Card -->
+  <mat-card class="history-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="history-icon">history</mat-icon>
+      <mat-card-title>Firmware History</mat-card-title>
+      <mat-card-subtitle>Previous firmware versions</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="firmwareHistory().length === 0" class="empty-history">
+        <mat-icon class="empty-icon">inventory_2</mat-icon>
+        <p>No firmware history available</p>
+      </div>
+
+      <div *ngIf="firmwareHistory().length > 0" class="table-container">
+        <table mat-table [dataSource]="firmwareHistory()" class="firmware-table">
+          <!-- Version Column -->
+          <ng-container matColumnDef="version">
+            <th mat-header-cell *matHeaderCellDef>Version</th>
+            <td mat-cell *matCellDef="let firmware">
+              <strong>{{ firmware.version }}</strong>
+            </td>
+          </ng-container>
+
+          <!-- Description Column -->
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef>Description</th>
+            <td mat-cell *matCellDef="let firmware">
+              {{ firmware.description || 'No description' }}
+            </td>
+          </ng-container>
+
+          <!-- Upload Date Column -->
+          <ng-container matColumnDef="uploadedAt">
+            <th mat-header-cell *matHeaderCellDef>Uploaded</th>
+            <td mat-cell *matCellDef="let firmware">
+              {{ firmware.uploadedAt | date:'medium' }}
+            </td>
+          </ng-container>
+
+          <!-- Status Column -->
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let firmware">
+              <mat-chip *ngIf="firmware.isActive" class="active-chip">Active</mat-chip>
+              <mat-chip *ngIf="!firmware.isActive" class="inactive-chip">Inactive</mat-chip>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
