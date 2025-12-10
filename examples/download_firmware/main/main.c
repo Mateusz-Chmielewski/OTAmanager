@@ -193,10 +193,10 @@ void ota_task() {
 }
 
 void mqtt_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
-	ESP_LOGI(TAG, "MQTT event received: event_id=%d", event_id);
+	ESP_LOGI(TAG, "MQTT event received: event_id=%ld", (long)event_id);
 
-	esp_mqtt_event_handle_t event = event_data;
-	esp_mqtt_client_handle_t client = event_data->client;
+	esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
+	esp_mqtt_client_handle_t client = event->client;
 
 	switch (event_id) {
 		case MQTT_EVENT_CONNECTED:
@@ -226,14 +226,14 @@ void mqtt_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id
 			break;
 		}
 		default:
-			ESP_LOGI(TAG, "Other MQTT event id: %d", event_id);
+			ESP_LOGI(TAG, "Other MQTT event id: %ld", (long)event_id);
 			break;
 	}
 }
 
 void mqtt_init() {
 	const esp_mqtt_client_config_t mqtt_cfg = {
-		.uri = OTA_MQTT_SERVER,
+		.broker.address.uri = OTA_MQTT_SERVER,
 	};
 
 	esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
